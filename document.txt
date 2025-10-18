@@ -417,9 +417,117 @@ gcloud builds submit --tag gcr.io/<PROJECT_ID>/utis-backend
 
 ✅ **Conclusion:**
 By making the RDS public, configuring the backend for Cloud Run, and ensuring environment variables and ports were correct, the UTIS system was successfully deployed with AWS PostgreSQL and GCP Cloud Run for both backend and frontend.
+Perfect 👏 — congratulations on getting **your entire UTIS system fully deployed** — backend on Google Cloud Run (connected to AWS RDS), and frontend (Next.js) on Google Cloud Run as well. That’s a full production-grade setup across multi-cloud infrastructure — impressive work.
+
+Here’s your short **Frontend Deployment Documentation Snippet** to add to your master deployment document:
 
 ---
 
-I can also create a **diagram showing AWS RDS + GCP backend + frontend connections**, which makes this documentation very clear for presentations or reports.
+# **Frontend Deployment (Next.js on Google Cloud Run)**
 
-Do you want me to add that diagram?
+## **Overview**
+
+The UTIS frontend, built with **Next.js**, was containerized using **Docker** and deployed to **Google Cloud Run**. This step provided a globally scalable, serverless hosting environment that automatically manages traffic and scaling.
+
+---
+
+## **1. Dockerfile Setup**
+
+A production-ready `Dockerfile` was created to define the Next.js build process and runtime environment.
+
+```dockerfile
+# Frontend Dockerfile
+
+# Use Node 20 Alpine for a lightweight build
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Build-time arguments for environment variables
+ARG NEXT_PUBLIC_MAPBOX_API
+ARG NEXT_PUBLIC_API_URL
+
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy all source files
+COPY . .
+
+# Set environment variables for build-time
+ENV NEXT_PUBLIC_MAPBOX_API=$NEXT_PUBLIC_MAPBOX_API
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+# Build the Next.js project
+RUN npm run build
+
+# Expose Next.js default port
+EXPOSE 3000
+
+# Start Next.js in production mode
+CMD ["npm", "start"]
+```
+
+---
+
+## **2. Cloud Build Configuration**
+
+Google Cloud Build was used to automate Docker image creation and deployment.
+The `cloudbuild.yaml` defined the steps to **build and push** the container image to **Artifact Registry**.
+
+```yaml
+steps:
+  # Build the Docker image with build-time environment variables
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'build',
+        '--build-arg', 'NEXT_PUBLIC_MAPBOX_API=$_NEXT_PUBLIC_MAPBOX_API',
+        '--build-arg', 'NEXT_PUBLIC_API_URL=$_NEXT_PUBLIC_API_URL',
+        '-t', 'europe-west2-docker.pkg.dev/$PROJECT_ID/utis-repo/frontend',
+        '.'
+      ]
+
+  # Push the built image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'push',
+        'europe-west2-docker.pkg.dev/$PROJECT_ID/utis-repo/frontend'
+      ]
+
+images:
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/utis-repo/frontend'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+```
+
+> 💡 **Note:** The `_NEXT_PUBLIC_MAPBOX_API` and `_NEXT_PUBLIC_API_URL` were provided **securely via the Google Cloud Build GUI**, rather than hardcoded in YAML. This ensured no sensitive credentials were exposed in version control.
+
+---
+
+## **3. Deploying to Cloud Run**
+
+After the image was pushed to Artifact Registry:
+
+1. Go to **Google Cloud Run → Create Service**.
+2. Select the built image from Artifact Registry.
+3. Configure:
+
+   * **Region:** europe-west2
+   * **Port:** `3000`
+   * **Allow unauthenticated invocations**
+   * Add environment variables if needed
+4. Deploy the service.
+
+Cloud Run automatically created a **public HTTPS endpoint** for the frontend.
+
+---
+
+## **4. Result**
+
+* ✅ Frontend live and connected to backend API on Cloud Run
+* ✅ Mapbox and API URLs securely injected at build time
+* ✅ Continuous deployment pipeline via Cloud Build
