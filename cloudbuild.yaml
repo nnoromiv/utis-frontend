@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'europe-west2-docker.pkg.dev/$PROJECT_ID/utis-repo/frontend', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'europe-west2-docker.pkg.dev/$PROJECT_ID/utis-repo/frontend']
+images:
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/utis-repo/frontend'
+options:
+  logging: CLOUD_LOGGING_ONLY   # or NONE if you don't want logs
+  # OR specify a logs bucket explicitly:
+  # logsBucket: gs://your-existing-logs-bucket
