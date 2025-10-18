@@ -1,152 +1,123 @@
-# **UTIS Frontend Dashboard Documentation**
+# UTIS: Unified Traffic & Incident System
 
-## **Project Overview**
+## Table of Contents
 
-The UTIS frontend is a **React/Next.js dashboard** built to visualize traffic, weather, and incident data in real time. It interacts directly with the FastAPI backend via REST API calls and provides a clean, responsive, and interactive user experience for monitoring London traffic conditions.
-
----
-
-## **Technologies Used**
-
-* **React / Next.js** – Component-based UI, SSR & routing support
-* **Redux Toolkit** – Global state management for selected city and user preferences
-* **React Query** – Data fetching, caching, auto-refresh, and loading/error handling
-* **Recharts** – Interactive charts and time-series visualizations
-* **Mapbox GL JS** – Geospatial mapping for traffic congestion and incident locations
-* **Tailwind CSS** – Responsive and modern styling
-* **HEROUi / Custom Cards** – Standardized UI components for displaying metrics
-* **Axios** – HTTP requests to the backend API
+- [UTIS: Unified Traffic \& Incident System](#utis-unified-traffic--incident-system)
+  - [Table of Contents](#table-of-contents)
+  - [Project Overview](#project-overview)
+  - [Setup Instructions](#setup-instructions)
+    - [1. Clone the repository](#1-clone-the-repository)
+    - [3. Frontend Setup](#3-frontend-setup)
+    - [Docker Deployment (Optional)](#docker-deployment-optional)
+  - [Architecture Decisions](#architecture-decisions)
+  - [Challenges Faced \& Solutions](#challenges-faced--solutions)
+  - [Screenshots](#screenshots)
+  - [License](#license)
 
 ---
 
-## **Architecture & Component Structure**
+## Project Overview
+
+UTIS is a **real-time traffic, weather, and incident monitoring system** for London, implementing a full ETL pipeline, REST API backend, and interactive frontend dashboard.  
+
+**Key Features:**
+
+- Real-time traffic and weather data visualization  
+- Interactive Mapbox map with traffic and incidents  
+- Dashboard cards with trends, summaries, and correlations  
+- Historical data retrieval and JSON exports  
+- Full cloud deployment with AWS PostgreSQL and Google Cloud Run  
+
+**Technologies Used:**
+
+- Backend: Python 3.11, FastAPI, SQLAlchemy, Pydantic  
+- Database: PostgreSQL (AWS RDS)  
+- Frontend: React / Next.js, Redux Toolkit, Recharts, Mapbox GL JS, Tailwind CSS  
+- Deployment: Docker, Docker Compose, Google Cloud Run  
+- Security: GitHub Actions, npm audit, Snyk  
+
+---
+
+## Setup Instructions
+
+### 1. Clone the repository
 
 ```bash
-frontend/
-├─ components/
-│  ├─ Cards.tsx                 # Weather, Traffic, Incident summary cards
-│  ├─ MapBox.tsx                # Interactive map showing traffic and incidents
-│  ├─ TrafficHeatMap.tsx        # Heatmap of congestion
-│  ├─ TimeSeriesChart.tsx       # Time-series visualization
-│  ├─ IncidentTable.tsx         # Tabular view of incidents
-│  ├─ TopBar.tsx                # Header/navigation
-│  └─ ThemeSwitcher.tsx         # Light/Dark mode switcher
-├─ pages/
-│  ├─ index.tsx                 # Main dashboard page
-│  └─ api/                      # API routes (if needed for SSR)
-├─ store/
-│  └─ index.ts                  # Redux store setup
-├─ lib/
-│  ├─ traffic_api.ts
-│  ├─ weather_api.ts
-│  └─ incidents_api.ts
-├─ styles/
-│  └─ globals.css
-├─ Dockerfile
-├─ package.json
-└─ tsconfig.json
+  git clone https://github.com/nnoromiv/utis-frontend.git
 ```
 
----
+### 3. Frontend Setup
 
-## **Key Features**
-
-### **1. Dashboard Cards**
-
-* **WeatherCard** – Displays current weather for the selected city.
-* **TrafficCard** – Shows aggregated traffic metrics: average congestion, delay.
-* **TrafficCardOriginToDestination** – Specific route information.
-* **IncidentCard** – Summary of incidents in London.
-* **Cards component** – Combines all cards, handles loading and error states gracefully.
-
-### **2. Interactive Map**
-
-* Shows real-time **traffic congestion** and **incident locations** using Mapbox.
-* Supports multiple routes and updates every 60–100 seconds.
-
-### **3. Visualizations**
-
-* **TrafficHeatMap** – Color-coded congestion heatmap for routes.
-* **TimeSeriesChart** – Trends in traffic or weather over time.
-* **Dynamic loading states** – Skeletons displayed while fetching data.
-* **Error handling** – Shows red error blocks when API requests fail.
-
-### **4. Redux State Management**
-
-* Stores **default city** globally.
-* Allows all components to read/write the selected city for weather and traffic queries.
-
-### **5. React Query Integration**
-
-* Caching, auto-refresh, stale data management.
-* Queries include `getWeatherByCity`, `getTrafficCurrent`, `getTrafficSummary`, `getIncidentsSummary`, `getWeatherTrafficCorrelation`, `getWeatherTrend`.
-* Handles loading and error states centrally for consistent UI experience.
-
-### **6. Responsive UI**
-
-* Fully responsive design for desktop, tablet, and mobile.
-* Cards stack on smaller screens.
-* Map and visualizations resize automatically.
-
-### **7. Theme Support**
-
-* Light and dark modes using `ThemeSwitcher`.
-* Dark mode applies to all cards, map overlays, and charts.
-
----
-
-## **Frontend Deployment**
-
-### **Docker Setup**
-
-**Dockerfile for frontend:**
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
-COPY . .
-EXPOSE 3000
-CMD ["yarn", "build"]
-```
-
-**docker-compose.yml** (frontend + backend + database):
-
-```yaml
-services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
-    depends_on:
-      - backend
-```
-
-### **Running Locally**
+1 Install dependencies:
 
 ```bash
-docker-compose up --build
+  npm install
 ```
 
-* **Frontend:** [http://localhost:3000](http://localhost:3000)
-* **Backend:** [http://localhost:8000](http://localhost:8000)
+2 Set environment variables (create a `.env.local` file):
 
-## **UI/UX Highlights**
+```bash
+  NEXT_PUBLIC_API_URL=http://localhost:8000
+  NEXT_PUBLIC_MAPBOX_API=<your_mapbox_token>
+```
 
-* Professional, clean design
-* Loading skeletons and error cards
-* Grid layout for multiple cards
-* Heatmaps and charts for intuitive visualization
-* Mobile-first responsiveness
+3 Run the development server:
+
+```bash
+  npm run dev
+```
+
+4 Open the dashboard:
+
+```bash
+  http://localhost:3000
+```
+
+### Docker Deployment (Optional)
+
+```bash
+  docker-compose up --build
+```
+
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend: [http://localhost:8000](http://localhost:8000)
 
 ---
 
-## **Next Steps / Improvements**
+## Architecture Decisions
 
-* Add **historical charts** for weather and traffic.
-* Integrate **push notifications** for incidents or high congestion.
-* Add **city search autocomplete** with API suggestions.
-* Improve **accessibility**, including ARIA attributes and keyboard navigation.
+**React / Next.js frontend:** Provides SSR, component-based architecture, and seamless integration with REST APIs.
+**Redux Toolkit + React Query:** Global state management and efficient data fetching with caching.
+**Mapbox GL JS:** Interactive geospatial visualization of traffic and incidents.
+**Docker & Cloud Run:** Enables reproducible, scalable, and serverless deployment.
+
+---
+
+## Challenges Faced & Solutions
+
+| Challenge                                                | Solution                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Scraping Google Maps blocked by anti-bot protection | Switched to official TfL API for reliable traffic data                          |
+| Inconsistent or missing traffic/weather data             | Implemented Pydantic validation and logging                                     |
+| Duplicate entries in database                            | Used PostgreSQL `ON CONFLICT` upserts                                           |
+| Container startup errors on Cloud Run                    | Configured containers to listen on `$PORT` and removed OS-specific dependencies |
+| Ensuring secure environment variables                    | Used GitHub secrets, `.env.local`, and Cloud Run env vars                       |
+
+---
+
+## Screenshots
+
+**Dashboard Overview**
+![Dashboard](src/images/dashboard.png.png)
+
+**Traffic Heatmap & Weather Trends**
+![Traffic Heatmap](src/images/chart.png)
+
+**Incident Table**
+![Incident Table](src/images/incident.png)
+
+---
+
+## License
+
+MIT License © 2025 Nnorom Christian
