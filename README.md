@@ -1,21 +1,5 @@
 # UTIS: Unified Traffic & Incident System
 
-## Table of Contents
-
-- [UTIS: Unified Traffic \& Incident System](#utis-unified-traffic--incident-system)
-  - [Table of Contents](#table-of-contents)
-  - [Project Overview](#project-overview)
-  - [Setup Instructions](#setup-instructions)
-    - [1. Clone the repository](#1-clone-the-repository)
-    - [3. Frontend Setup](#3-frontend-setup)
-    - [Docker Deployment (Optional)](#docker-deployment-optional)
-  - [Architecture Decisions](#architecture-decisions)
-  - [Challenges Faced \& Solutions](#challenges-faced--solutions)
-  - [Screenshots](#screenshots)
-  - [License](#license)
-
----
-
 ## Project Overview
 
 UTIS is a **real-time traffic, weather, and incident monitoring system** for London, implementing a full ETL pipeline, REST API backend, and interactive frontend dashboard.  
@@ -108,7 +92,7 @@ UTIS is a **real-time traffic, weather, and incident monitoring system** for Lon
 ## Screenshots
 
 **Dashboard Overview**
-![Dashboard](src/images/dashboard.png.png)
+![Dashboard](src/images/dashboard.png)
 
 **Traffic Heatmap & Weather Trends**
 ![Traffic Heatmap](src/images/chart.png)
