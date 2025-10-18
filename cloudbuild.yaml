@@ -23,7 +23,3 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
-
-substitutions:
-  _NEXT_PUBLIC_MAPBOX_API: "<your_mapbox_api_key_here>"
-  _NEXT_PUBLIC_API_URL: "https://your-backend-url"
