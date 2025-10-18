@@ -3,12 +3,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
+COPY package.json package-lock.json ./
 
-RUN yarn install --frozen-lockfile
+RUN npm ci
 
 COPY . .
 
+# Build Next.js
+RUN npm run build
+
 EXPOSE 3000
 
-CMD ["yarn", "build"]
+# Start Next.js server in production
+CMD ["npm", "start"]
