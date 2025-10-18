@@ -1,0 +1,247 @@
+# **UTIS Take-Home Assignment Submission Summary**
+
+## **Project Overview**
+
+The UTIS project implements a complete **ETL pipeline and dashboard** for collecting, storing, processing, and visualizing **traffic and weather data** for London. It uses **Python, PostgreSQL, FastAPI, React/Next.js**, and external APIs, and includes a structured database schema, data validation, trend analysis, and correlation calculations.
+
+The project consists of **three main components**:
+
+1. **Backend / ETL Pipeline** – Python, FastAPI, PostgreSQL
+2. **Frontend Dashboard** – React/Next.js, Redux, Recharts, Mapbox
+3. **Deployment & Containerization** – Docker, optional cloud exposure
+
+---
+
+## **Stage 1: Data Extraction**
+
+**Primary Traffic Source:**
+
+* Attempted extraction from **Google Maps / Waze**, but anti-bot protection prevented reliable scraping.
+* **Fallback Used:** **TfL API** for live traffic data including journey times, congestion percentages, delays, traffic speeds, and incident locations.
+* Captures meaningful metrics rather than raw HTML.
+
+**Primary Weather Source:**
+
+* Used **OpenWeatherMap API** to extract temperature, humidity, wind speed, visibility, and weather condition.
+* Fully validated and ready for downstream processing.
+
+**Challenges & Mitigations:**
+
+* **Anti-bot protection** on Google Maps/Waze prevented scraping.
+* Attempted **undetected-chromedriver** and visual analysis.
+* Documented all failed attempts and implemented reliable API fallback.
+
+**Lessons Learned:**
+
+* Scraping live traffic data from Google Maps/Waze is highly unreliable.
+* Pivoting to **TfL API** ensured stable data.
+* Reinforced the importance of adaptability, robust validation, and clear documentation when using third-party data sources.
+
+---
+
+## **Stage 2: Data Pipeline (ETL)**
+
+### **1. Data Validation**
+
+* Implemented **Pydantic models** for Weather, Traffic, TrafficSpeed, and Incident data.
+* Sanity checks ensure correct types and valid values.
+* Invalid or missing records are logged and skipped.
+
+### **2. Database Storage**
+
+* **PostgreSQL Schema:**
+
+  * `weather` table: indexed on `city` and `timestamp`.
+  * `traffic` table: indexed on `origin-destination` and `timestamp`.
+  * `traffic_speed` table: child of `traffic`, unique constraint on `(traffic_id, type)` for upserts.
+  * `incident` table: indexed on `location` and `timestamp`.
+* **Upserts** implemented using `ON CONFLICT` to prevent duplicates and update latest data.
+* Supports both origin and destination weather records.
+
+### **3. Processing & Analysis**
+
+* Calculated **averages**, **daily trends**, **summary statistics**, and **incident distributions**.
+* Computed **weather ↔ traffic correlation** for temperature, humidity, wind speed against delay and congestion.
+* NaNs replaced with `"N/A"` for clarity.
+
+---
+
+## **Stage 3: Backend API**
+
+* Built **FastAPI REST endpoints** for Weather, Traffic, Incidents, Summary, Visualizations, and System metrics.
+* Endpoints provide **current, historical, summary, trends, and correlation data**.
+* Supports **pagination** for large datasets and **refresh operations** to pull new data from APIs.
+* Includes **optional caching** for expensive queries (e.g., summary endpoints).
+
+### **Weather Endpoints**
+
+* `/api/weather/current` – latest weather for all cities
+* `/api/weather/{city}` – weather for a specific city
+* `/api/weather/history` – historical weather with pagination
+* `/api/weather/summary` – aggregated summary
+* `/api/weather/refresh` – fetch new weather data
+
+### **Traffic Endpoints**
+
+* `/api/traffic/current` – latest traffic for all routes
+* `/api/traffic/{origin}/{destination}` – specific route traffic
+* `/api/traffic/history` – historical traffic with pagination
+* `/api/traffic/summary` – aggregated traffic statistics
+* `/api/traffic/refresh` – fetch new traffic data
+
+### **Incident Endpoints**
+
+* `/api/incidents/current` – active incidents
+* `/api/incidents/{id}` – detailed incident info
+* `/api/incidents/summary` – aggregated counts and severity distributions
+
+### **Summary & Correlation**
+
+* `/api/summary` – unified weather, traffic, and incident summary
+* `/api/summary/weather-traffic` – weather–traffic correlation matrix
+* `/api/summary/overview` – key indicators (counts, averages, timestamps)
+
+### **Visualizations**
+
+* `/api/visuals/congestion-gauge` – overall congestion
+* `/api/visuals/congestion-heatmap` – origin-destination congestion map
+* `/api/visuals/traffic-trend` – time-series congestion/delay
+* `/api/visuals/weather-trend` – temperature/humidity trend
+* `/api/visuals/weather-impact` – correlation summary
+
+### **System & Data Endpoints**
+
+* `/api/data/sample` – latest 5 records from all tables
+* `/api/data/export` – full dataset export (JSON)
+* `/api/system/health` – DB connection + data freshness check
+* `/api/system/stats` – record counts & latest timestamps
+
+---
+
+## **Frontend Dashboard Documentation**
+
+### **Project Overview**
+
+The UTIS frontend is a **React/Next.js dashboard** built to visualize traffic, weather, and incident data in real time. It interacts directly with the FastAPI backend via REST API calls and provides a clean, responsive, and interactive user experience for monitoring London traffic conditions.
+
+### **Technologies Used**
+
+* **React / Next.js** – Component-based UI, SSR & routing support
+* **Redux Toolkit** – Global state management for selected city
+* **React Query** – Data fetching, caching, auto-refresh, loading/error handling
+* **Recharts** – Interactive charts and time-series visualizations
+* **Mapbox GL JS** – Geospatial mapping for traffic congestion and incident locations
+* **Tailwind CSS** – Responsive and modern styling
+* **Axios** – HTTP requests to the backend API
+
+### **Architecture & Component Structure**
+
+```
+frontend/
+├─ components/
+│  ├─ Cards.tsx                 # Weather, Traffic, Incident summary cards
+│  ├─ MapBox.tsx                # Interactive map showing traffic and incidents
+│  ├─ TrafficHeatMap.tsx        # Heatmap of congestion
+│  ├─ TimeSeriesChart.tsx       # Time-series visualization
+│  ├─ IncidentTable.tsx         # Tabular view of incidents
+│  ├─ TopBar.tsx                # Header/navigation
+│  └─ ThemeSwitcher.tsx         # Light/Dark mode switcher
+├─ pages/
+│  ├─ index.tsx                 # Main dashboard page
+│  └─ api/                      # API routes (if needed for SSR)
+├─ store/
+│  └─ index.ts                  # Redux store setup
+├─ lib/
+│  ├─ traffic_api.ts
+│  ├─ weather_api.ts
+│  └─ incidents_api.ts
+├─ styles/
+│  └─ globals.css
+├─ Dockerfile
+├─ package.json
+└─ tsconfig.json
+```
+
+### **Key Features**
+
+* **Dashboard Cards:** WeatherCard, TrafficCard, TrafficCardOriginToDestination, IncidentCard
+* **Interactive Map:** Real-time traffic and incidents via Mapbox
+* **Visualizations:** Heatmap (TrafficHeatMap) & Time-series chart (TimeSeriesChart)
+* **Redux State Management:** Global default city
+* **React Query Integration:** Auto-refresh, caching, loading/error handling
+* **Responsive UI:** Desktop, tablet, mobile support
+* **Theme Support:** Light/Dark mode via ThemeSwitcher
+
+### **Frontend Deployment**
+
+**Dockerfile for frontend:**
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+COPY . .
+EXPOSE 3000
+CMD ["yarn", "dev"]
+```
+
+**docker-compose.yml**:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
+    depends_on:
+      - backend
+```
+
+* Run locally: `docker-compose up --build`
+* Public access (optional): **ngrok**, **localtunnel**, **Cloudflare Tunnel**
+
+---
+
+## **Key Features Implemented**
+
+* Handles **duplicate weather and traffic entries**
+* Stores **traffic speeds** per traffic record with upserts
+* Generates **JSON output** of sample data locally
+* Fully containerizable with **PostgreSQL**
+* Provides **logging** for transparency and debugging
+* Full **REST API coverage** with proper error handling, validation, and documentation
+* Supports **trend analysis, correlation, and visualization endpoints**
+
+---
+
+## **Fallbacks & Documentation**
+
+* Primary scraping failed → fallback APIs fully implemented
+* README documents:
+
+  * All scraping attempts
+  * Anti-bot issues encountered
+  * Rationale for using TfL API and OpenWeatherMap
+
+---
+
+## **Summary of Achievement**
+
+| Requirement                  | Status                                                  |
+| ---------------------------- | ------------------------------------------------------- |
+| Traffic extraction (metrics) | ✅ Implemented via TfL API fallback                      |
+| Weather extraction           | ✅ OpenWeatherMap API                                    |
+| Data validation              | ✅ Fully implemented with Pydantic                       |
+| Database storage             | ✅ PostgreSQL schema with indexes & upserts              |
+| Processing & trend analysis  | ✅ Averages, trends, correlation computed                |
+| Handling expected challenges | ✅ Documented anti-bot failures and fallbacks            |
+| JSON export of sample data   | ✅ Implemented                                           |
+| REST API backend             | ✅ Implemented with endpoints, summaries, visualizations |
+| Frontend dashboard           | ✅ React/Next.js, Redux, Recharts, Mapbox                |
+| System & admin metrics       | ✅ Implemented (`/system/health`, `/system/stats`)       |
+
+**Overall Completion:** ✅ 100% of assignment requirements fully handled.
+All stages (Extraction → ETL → Processing → API → Dashboard → Reporting) are implemented and documented.
