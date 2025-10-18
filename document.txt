@@ -245,3 +245,181 @@ services:
 
 **Overall Completion:** ✅ 100% of assignment requirements fully handled.
 All stages (Extraction → ETL → Processing → API → Dashboard → Reporting) are implemented and documented.
+
+
+Absolutely! Here’s a structured **deployment documentation** based on everything you’ve gone through for deploying your backend and frontend with AWS Postgres and Google Cloud. I’ve written it in a clear, professional format so it can serve as part of a report or operational documentation.
+
+---
+
+# **UTIS Deployment Documentation: AWS Postgres + Google Cloud Backend & Frontend**
+
+## **1. Overview**
+
+This document describes the process of deploying the UTIS application with the following configuration:
+
+* **Database**: Amazon RDS PostgreSQL
+* **Backend**: Python FastAPI application deployed on Google Cloud Run
+* **Frontend**: React/Next.js application deployed on Google Cloud Run
+* **Goal**: Enable full cloud deployment with backend connecting to AWS-hosted PostgreSQL and frontend communicating with the backend.
+
+---
+
+## **2. Backend Deployment Challenges and Solutions**
+
+### **2.1 Initial Setup**
+
+* The backend was initially tested and running locally using Docker.
+* The Docker container included dependencies for FastAPI, SQLAlchemy, PostgreSQL client, and Windows-specific packages that needed removal for Linux compatibility.
+* PostgreSQL connection was initially local (`localhost`), requiring configuration for cloud connectivity.
+
+---
+
+### **2.2 Cloud PostgreSQL Setup**
+
+* Created an **Amazon RDS PostgreSQL instance** named `traffic-data`.
+* Database name: `utis_db`
+* Made the database **publicly accessible** to allow connections from Cloud Run.
+* Configured security groups to allow **incoming connections on port 5432**.
+
+**Key environment variables set for Cloud Run backend:**
+
+```text
+POSTGRES_HOST=traffic-data.ck148gu8ka3s.us-east-1.rds.amazonaws.com
+POSTGRES_PORT=5432
+POSTGRES_DB=utis_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=<YOUR_PASSWORD>
+PORT=8080
+```
+
+---
+
+### **2.3 Dockerfile Adjustments**
+
+* Base image changed to Linux-compatible Python 3.11-slim.
+* Removed Windows-only packages (`pywin32` and `pypiwin32`) from `requirements.txt`.
+* Installed system dependencies:
+
+```dockerfile
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    libffi-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+* Entrypoint adjusted for Cloud Run compatibility:
+
+```bash
+#!/bin/bash
+set -e
+
+echo "🚀 Starting backend on Cloud Run..."
+
+# Database initialization
+echo "⏳ Initializing database tables..."
+python init_db.py
+echo "✅ Database initialization complete!"
+
+# Start FastAPI on the port provided by Cloud Run
+exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
+```
+
+* FastAPI is configured to listen on `0.0.0.0` and the port provided by Cloud Run.
+
+---
+
+### **2.4 Database Connection Configuration**
+
+* `SQLAlchemy` engine configured to use environment variables for credentials:
+
+```python
+from sqlalchemy import create_engine
+import os
+
+engine = create_engine(
+    f"postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
+    f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
+)
+```
+
+* Ensured no hard-coded credentials were used.
+
+---
+
+### **2.5 Deployment to Google Cloud Run**
+
+1. **Build Docker Image with Cloud Build:**
+
+```bash
+gcloud builds submit --tag gcr.io/<PROJECT_ID>/utis-backend
+```
+
+2. **Deploy Container to Cloud Run via GUI:**
+
+* Selected **Container Image**: `gcr.io/<PROJECT_ID>/utis-backend`
+* Set **Region**: `europe-west2`
+* Set **Environment Variables** (as above)
+* Allowed unauthenticated access (if public API required)
+
+3. **Testing & Logs:**
+
+* Verified connection to AWS RDS PostgreSQL.
+* Debugged initial errors with socket connections by using the **public RDS endpoint** instead of default `localhost` or private IP.
+
+---
+
+### **2.6 Observed Issues and Fixes**
+
+| Issue                                          | Cause                                               | Solution                                                             |
+| ---------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------- |
+| Backend container could not start on Cloud Run | Backend was listening on wrong port (`8000`)        | Set `${PORT:-8080}` in `uvicorn` startup                             |
+| Connection refused to PostgreSQL               | Container attempted `localhost` socket              | Updated `POSTGRES_HOST` to AWS RDS public endpoint                   |
+| Cloud Build failed due to Windows packages     | `pywin32` and `pypiwin32` not compatible with Linux | Removed Windows packages from `requirements.txt`                     |
+| Database initialization failed                 | SQL files missing or misconfigured path             | Added check for existence and proper path resolution in `init_db.py` |
+
+---
+
+## **3. Frontend Deployment**
+
+* Frontend was already containerized and built successfully with Docker locally.
+
+* Deployed using **Cloud Run** GUI:
+
+  * Exposed port `3000`
+  * Environment variables pointing to backend API URL: `NEXT_PUBLIC_API_URL=<Cloud Run backend URL>`
+
+* Verified connectivity between frontend and backend.
+
+---
+
+## **4. Successful Deployment Outcome**
+
+* **Backend**: FastAPI running on Cloud Run, connecting to AWS RDS PostgreSQL
+* **Frontend**: React/Next.js app running on Cloud Run, communicating with backend
+* Application fully functional in a **hybrid AWS + GCP cloud setup**
+
+---
+
+## **5. Lessons Learned / Best Practices**
+
+1. Always ensure the **container listens on the port provided by Cloud Run**.
+2. For databases hosted outside GCP:
+
+   * Must be publicly accessible or accessible via **VPC connector**
+   * Security group must allow Cloud Run IPs
+3. Remove OS-specific Python packages when building Linux containers.
+4. Environment variables are essential for flexible deployment across environments.
+5. Cloud Run logs (`Cloud Logging`) are critical for debugging connection and container startup issues.
+
+---
+
+✅ **Conclusion:**
+By making the RDS public, configuring the backend for Cloud Run, and ensuring environment variables and ports were correct, the UTIS system was successfully deployed with AWS PostgreSQL and GCP Cloud Run for both backend and frontend.
+
+---
+
+I can also create a **diagram showing AWS RDS + GCP backend + frontend connections**, which makes this documentation very clear for presentations or reports.
+
+Do you want me to add that diagram?
