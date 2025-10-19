@@ -3,7 +3,7 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faRefresh } from "@fortawesome/free-solid-svg-icons";
-import { Tooltip, Spinner } from "@heroui/react";
+import { Tooltip, Spinner, addToast } from "@heroui/react";
 import { useDispatch, useSelector } from "react-redux";
 import { setDefaultCity } from "@/store/locationSlice";
 import { RootState } from "@/store";
@@ -15,14 +15,16 @@ import {
   Button,
 } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
-import { getAllCity } from "@/lib/weather_api";
-import Link from "next/link";
+import { getAllCity, postRefreshWeather } from "@/lib/weather_api";
 import { getExportData } from "@/lib/api";
 import { exportToExcel } from "@/helper/exportToExcel";
+import { postRefreshTraffic } from "@/lib/traffic_api";
+import { setIsDataRefreshed } from "@/store/refreshSlice";
 
 const TopBar = () => {
   const dispatch = useDispatch();
   const city = useSelector((state: RootState) => state.location.defaultCity);
+  const [isDataRefreshing, setIsDataRefreshing] = React.useState(false);
 
   const {
     data,
@@ -43,6 +45,39 @@ const TopBar = () => {
     queryKey: ["export-data"],
     queryFn: getExportData,
   });
+
+  const handleDataRefresh = async () => {
+    try {
+      setIsDataRefreshing(true);
+      const [weatherResponse, trafficResponse] = await Promise.all([
+        postRefreshWeather(),
+        postRefreshTraffic(),
+      ]);
+
+      if (weatherResponse.status === 'success' && trafficResponse.status === 'success') {
+        addToast({
+          title: "Data Refreshed",
+          description: "Weather and traffic data have been refreshed successfully.",
+          timeout: 3000,
+          shouldShowTimeoutProgress: true,
+        })
+
+        dispatch(setIsDataRefreshed(true));
+        setIsDataRefreshing(false);
+        return;
+      }
+
+      addToast({
+        title: "Refresh Failed",
+        description: "Failed to refresh data. Please try again later.",
+        timeout: 3000,
+        shouldShowTimeoutProgress: true,
+      })
+
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+  }
 
   const selectOption = (value: string) => {
     dispatch(setDefaultCity(value || "London"));
@@ -125,18 +160,19 @@ const TopBar = () => {
         >
           <FontAwesomeIcon
             icon={faDownload}
-            className={`cursor-pointer transition-all ${loadingExport ? "opacity-50 pointer-events-none" : "text-amber-900 hover:text-amber-700" }`}
+            className={`cursor-pointer transition-all ${loadingExport ? "opacity-50 pointer-events-none" : "text-amber-900 hover:text-amber-700"}`}
             onClick={handleDownload}
           />
         </Tooltip>
 
         <Tooltip content="Refresh dashboard">
-          <Link href="/" >
-            <FontAwesomeIcon
-              icon={faRefresh}
-              className="cursor-pointer text-success"
-            />
-          </Link>
+          <FontAwesomeIcon
+            icon={faRefresh}
+            className={`cursor-pointer text-success ${isDataRefreshing ? "animate-spin" : "hover:text-success/70"} transition-all `}
+            onClick={() => {
+              handleDataRefresh();
+            }}
+          />
         </Tooltip>
       </div>
     </div>

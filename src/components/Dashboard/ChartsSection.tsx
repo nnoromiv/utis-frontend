@@ -1,11 +1,17 @@
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button, Divider } from "@heroui/react";
 import TrafficHeatMap from "../TrafficHeatMap";
 import TimeSeriesChart from "../TimeSeriesChart";
 import { getWeatherTrafficCorrelation, getWeatherTrend } from "@/lib/api";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store";
+import { setIsDataRefreshed } from "@/store/refreshSlice";
 
 const ChartsSection: React.FC = () => {
+    const dispatch = useDispatch();
+    const isDataRefreshed = useSelector((state: RootState) => state.isDataRefreshed.refresh);
+
     const {
         data: heatMapData,
         isLoading: loadingHeatMapData,
@@ -31,10 +37,27 @@ const ChartsSection: React.FC = () => {
     const isLoading = loadingHeatMapData || loadingWeatherTrendData;
     const isError = errorHeatMapData || errorWeatherTrendData;
 
-    const handleRefetch = () => {
-        heatMapRefetch();
-        weatherTrendRefetch();
-    }
+    const handleRefetch = useCallback(async () => {
+        try {
+            await Promise.all([
+                heatMapRefetch(),
+                weatherTrendRefetch()
+            ]);
+            console.log("Dashboard data refreshed successfully");
+        } catch (err) {
+            console.error("Error refreshing dashboard data:", err);
+        }
+    }, [
+        heatMapRefetch,
+        weatherTrendRefetch,
+    ]);
+
+    useEffect(() => {
+        if (isDataRefreshed) {
+            handleRefetch();
+            dispatch(setIsDataRefreshed(false));
+        }
+    }, [isDataRefreshed, handleRefetch, dispatch]);
 
     if (isLoading) {
         return (
@@ -53,14 +76,14 @@ const ChartsSection: React.FC = () => {
                     Error loading charts
 
                     <Button
-                    size="sm"
-                    variant="flat"
-                    color="warning"
-                    className="ml-4"
-                    onPress={() => handleRefetch()}
-                >
-                    Retry
-                </Button>
+                        size="sm"
+                        variant="flat"
+                        color="warning"
+                        className="ml-4"
+                        onPress={() => handleRefetch()}
+                    >
+                        Retry
+                    </Button>
                 </div>
             </div>
         );

@@ -1,15 +1,18 @@
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getWeatherByCity } from "@/lib/weather_api";
 import { getTrafficByCity, getTrafficSummary } from "@/lib/traffic_api";
 import { getIncidentsSummary } from "@/lib/incidents_api";
 import { WeatherCard, TrafficCard, IncidentCard, TrafficCardOriginToDestination } from "../CCard";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Button } from "@heroui/react";
+import { setIsDataRefreshed } from "@/store/refreshSlice";
 
 const Cards: React.FC = () => {
+    const dispatch = useDispatch();
     const city = useSelector((state: RootState) => state.location.defaultCity);
+    const isDataRefreshed = useSelector((state: RootState) => state.isDataRefreshed.refresh);
 
     const {
         data: cityWeatherData,
@@ -64,12 +67,32 @@ const Cards: React.FC = () => {
         loadingWeatherByCity || loadingTrafficSummary || loadingIncidentSummary || loadingTrafficDataOriginToDestination;
     const isError = errorWeatherByCity || errorTrafficSummary || errorIncidentSummary;
 
-    const handleRefetch = () => {
-        weatherRefetch();
-        trafficRefetch();
-        incidentRefetch();
-        trafficOriginToDestinationRefetch();
-    }
+    const handleRefetch = useCallback(async () => {
+        try {
+            const coreRefetches = [
+                weatherRefetch(),
+                trafficRefetch(),
+                incidentRefetch(),
+            ];
+
+            // If the city isn't London, also refresh traffic origin→destination
+            if (city && city !== "London") {
+                coreRefetches.push(trafficOriginToDestinationRefetch());
+            }
+
+            await Promise.all(coreRefetches);
+            console.log("Dashboard data refreshed successfully");
+        } catch (err) {
+            console.error("Error refreshing dashboard data:", err);
+        }
+    }, [city, incidentRefetch, trafficOriginToDestinationRefetch, trafficRefetch, weatherRefetch]);
+
+    useEffect(() => {
+        if (isDataRefreshed) {
+            handleRefetch();
+            dispatch(setIsDataRefreshed(false));
+        }
+    }, [isDataRefreshed, handleRefetch, dispatch]);
 
     if (isLoading) {
         return (
@@ -91,14 +114,14 @@ const Cards: React.FC = () => {
                 <div className="h-[150px] w-full flex items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">
                     Error loading summaries
                     <Button
-                    size="sm"
-                    variant="flat"
-                    color="warning"
-                    className="ml-4"
-                    onPress={() => handleRefetch()}
-                >
-                    Retry
-                </Button>
+                        size="sm"
+                        variant="flat"
+                        color="warning"
+                        className="ml-4"
+                        onPress={() => handleRefetch()}
+                    >
+                        Retry
+                    </Button>
                 </div>
             </div>
         );
@@ -109,10 +132,10 @@ const Cards: React.FC = () => {
         <div className='flex justify-between w-full gap-3 mb-2 max-lg:grid max-lg:grid-cols-2 max-md:grid-cols-1'>
             <WeatherCard weatherData={cityWeatherData} />
             <TrafficCard trafficSummary={trafficSummary} />
-                {
-                    city !== "London" && trafficDataOriginToDestination &&
-                    (<TrafficCardOriginToDestination trafficDataOriginToDestination={trafficDataOriginToDestination} />)
-                }
+            {
+                city !== "London" && trafficDataOriginToDestination &&
+                (<TrafficCardOriginToDestination trafficDataOriginToDestination={trafficDataOriginToDestination} />)
+            }
             <IncidentCard incidentSummary={incidentSummary} />
         </div>
     );

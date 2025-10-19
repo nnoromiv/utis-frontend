@@ -1,6 +1,6 @@
 "use client";
 
-import { HeroUIProvider } from '@heroui/react'
+import { HeroUIProvider, ToastProvider } from '@heroui/react'
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
@@ -18,6 +18,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <Provider store={store}>
       <ReactQueryProvider>
         <HeroUIProvider>
+          <ToastProvider />
           <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem>
             {children}
           </NextThemesProvider>

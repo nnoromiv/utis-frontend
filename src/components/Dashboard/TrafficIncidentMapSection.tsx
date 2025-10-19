@@ -6,6 +6,7 @@ import MapBox from "../MapBox";
 import { Button } from "@heroui/react";
 
 const TrafficIncidentMapSection: React.FC = () => {
+    
     const {
         data: trafficData,
         isLoading: loadingTrafficData,
