@@ -29,7 +29,7 @@ export const getWeatherTrend = async () => {
 // System
 
 export const getExportData = async () => {
-  const res = await api.get(`/api/data/export}`);
+  const res = await api.get(`/api/data/export`);
   return res.data;
 };
 

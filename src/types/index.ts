@@ -125,3 +125,9 @@ export interface ITrafficHeatMapProps {
 export interface IIncidentTableProps {
     incidents: IIncidentData[]
 }
+
+export interface IExportData {
+  weather: IWeatherData[];
+  traffic: ITrafficData[];
+  incidents: IIncidentData[];
+}

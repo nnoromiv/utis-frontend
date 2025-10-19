@@ -6,6 +6,7 @@ import { getIncidentsSummary } from "@/lib/incidents_api";
 import { WeatherCard, TrafficCard, IncidentCard, TrafficCardOriginToDestination } from "../CCard";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { Button } from "@heroui/react";
 
 const Cards: React.FC = () => {
     const city = useSelector((state: RootState) => state.location.defaultCity);
@@ -14,6 +15,7 @@ const Cards: React.FC = () => {
         data: cityWeatherData,
         isLoading: loadingWeatherByCity,
         isError: errorWeatherByCity,
+        refetch: weatherRefetch,
     } = useQuery({
         queryKey: ["weather-city", city],
         queryFn: () => getWeatherByCity(city),
@@ -26,6 +28,7 @@ const Cards: React.FC = () => {
         data: trafficSummary,
         isLoading: loadingTrafficSummary,
         isError: errorTrafficSummary,
+        refetch: trafficRefetch,
     } = useQuery({
         queryKey: ["traffic-summary"],
         queryFn: getTrafficSummary,
@@ -35,6 +38,7 @@ const Cards: React.FC = () => {
     const {
         data: trafficDataOriginToDestination,
         isLoading: loadingTrafficDataOriginToDestination,
+        refetch: trafficOriginToDestinationRefetch,
     } = useQuery({
         queryKey: ["traffic-origin-destination", "London", city],
         queryFn: () => getTrafficByCity("London", city),
@@ -48,6 +52,7 @@ const Cards: React.FC = () => {
         data: incidentSummary,
         isLoading: loadingIncidentSummary,
         isError: errorIncidentSummary,
+        refetch: incidentRefetch,
     } = useQuery({
         queryKey: ["incident-summary"],
         queryFn: getIncidentsSummary,
@@ -58,6 +63,13 @@ const Cards: React.FC = () => {
     const isLoading =
         loadingWeatherByCity || loadingTrafficSummary || loadingIncidentSummary || loadingTrafficDataOriginToDestination;
     const isError = errorWeatherByCity || errorTrafficSummary || errorIncidentSummary;
+
+    const handleRefetch = () => {
+        weatherRefetch();
+        trafficRefetch();
+        incidentRefetch();
+        trafficOriginToDestinationRefetch();
+    }
 
     if (isLoading) {
         return (
@@ -78,6 +90,15 @@ const Cards: React.FC = () => {
             <div className="flex justify-between w-full gap-3 mb-2 max-lg:grid max-lg:grid-cols-2 max-md:grid-cols-1">
                 <div className="h-[150px] w-full flex items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">
                     Error loading summaries
+                    <Button
+                    size="sm"
+                    variant="flat"
+                    color="warning"
+                    className="ml-4"
+                    onPress={() => handleRefetch()}
+                >
+                    Retry
+                </Button>
                 </div>
             </div>
         );

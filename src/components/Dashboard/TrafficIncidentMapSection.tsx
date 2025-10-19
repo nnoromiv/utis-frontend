@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { getTrafficCurrent } from "@/lib/traffic_api";
 import { getIncidentsCurrent } from "@/lib/incidents_api";
 import MapBox from "../MapBox";
+import { Button } from "@heroui/react";
 
 const TrafficIncidentMapSection: React.FC = () => {
     const {
         data: trafficData,
         isLoading: loadingTrafficData,
         isError: errorTrafficData,
+        refetch: trafficRefetch,
     } = useQuery({
         queryKey: ["traffic-current"],
         queryFn: getTrafficCurrent,
@@ -19,6 +21,7 @@ const TrafficIncidentMapSection: React.FC = () => {
         data: incidentData,
         isLoading: loadingIncidentData,
         isError: errorIncidentData,
+        refetch: incidentRefetch,
     } = useQuery({
         queryKey: ["incident-current"],
         queryFn: getIncidentsCurrent,
@@ -28,6 +31,11 @@ const TrafficIncidentMapSection: React.FC = () => {
     // Combined loading/error flags
     const isLoading = loadingTrafficData || loadingIncidentData;
     const isError = errorTrafficData || errorIncidentData;
+
+    const handleRefetch = () => {
+        trafficRefetch();
+        incidentRefetch();
+    }
 
     // Handle loading state
     if (isLoading) {
@@ -43,6 +51,15 @@ const TrafficIncidentMapSection: React.FC = () => {
         return (
             <div className="h-[300px] w-full flex items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">
                 Failed to load traffic or incident data. Please try again later.
+                <Button
+                    size="sm"
+                    variant="flat"
+                    color="warning"
+                    className="ml-4"
+                    onPress={() => handleRefetch()}
+                >
+                    Retry
+                </Button>
             </div>
         );
     }
